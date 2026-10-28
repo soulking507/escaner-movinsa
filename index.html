@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#160f14">
+<title>Escáner de entradas · After Ruede Halloween</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    --noche: #160f14;
+    --panel: #241a21;
+    --linea: #3a2c35;
+    --calabaza: #ff7a1a;
+    --texto: #f6efe9;
+    --suave: #b9aab0;
+    --ok: #17a34a;
+    --usado: #f59e0b;
+    --no: #dc2626;
+    --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+    --cuerpo: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--noche);
+    color: var(--texto);
+    font-family: var(--cuerpo);
+    font-size: 17px;
+    line-height: 1.45;
+    -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 480px; margin: 0 auto; padding: 20px 18px 32px; }
+
+  header { margin-bottom: 22px; }
+  .marca { font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: .08em; color: var(--suave); }
+  h1 { font-family: var(--display); font-weight: 800; font-size: 40px; line-height: 1; margin: 4px 0 0; color: var(--calabaza); }
+
+  label { display: block; font-weight: 600; margin-bottom: 8px; }
+  input {
+    width: 100%; font: 600 26px var(--cuerpo); letter-spacing: .12em;
+    padding: 14px 16px; border-radius: 10px; border: 2px solid var(--linea);
+    background: var(--panel); color: var(--texto); outline: none;
+  }
+  input:focus { border-color: var(--calabaza); }
+  button {
+    font: 800 24px var(--display); letter-spacing: .03em;
+    border: 0; border-radius: 10px; padding: 16px 20px; cursor: pointer;
+    background: var(--calabaza); color: #1b0d02; width: 100%;
+  }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--texto); outline-offset: 2px; }
+  button.sec { background: transparent; color: var(--suave); border: 2px solid var(--linea); font-size: 20px; padding: 12px; }
+  .espacio { height: 14px; }
+  .msg { min-height: 1.5em; margin: 14px 0 0; color: var(--suave); }
+  .msg.error { color: #ff8a8a; }
+
+  #lector {
+    width: 100%; border-radius: 14px; overflow: hidden;
+    border: 3px solid var(--calabaza); background: #000; aspect-ratio: 1 / 1;
+  }
+  #lector video { object-fit: cover; }
+  .contador { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0; color: var(--suave); }
+  .contador b { font-family: var(--display); font-size: 34px; color: var(--texto); }
+  .manual { display: flex; gap: 10px; margin-bottom: 14px; }
+  .manual input { font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
+  .manual button { width: auto; font-size: 20px; padding: 12px 18px; }
+
+  /* Pantalla de resultado: ocupa todo para leerse de lejos */
+  #resultado {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; padding: 24px; padding-top: calc(24px + env(safe-area-inset-top, 0px));
+    background: var(--panel); color: #fff; cursor: pointer;
+  }
+  #resultado[hidden] { display: none; }
+  #resultado.ok { background: var(--ok); }
+  #resultado.usado { background: var(--usado); color: #1f1300; }
+  #resultado.no { background: var(--no); }
+  .r-icono { font-size: 96px; line-height: 1; }
+  .r-titulo { font-family: var(--display); font-weight: 800; font-size: clamp(48px, 15vw, 80px); line-height: .95; margin: 16px 0 10px; }
+  .r-nombre { font-size: 26px; font-weight: 600; margin: 0; overflow-wrap: anywhere; }
+  .r-detalle { font-size: 19px; margin: 8px 0 0; opacity: .9; }
+  .r-toca { position: absolute; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); font-size: 16px; opacity: .8; margin: 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    #resultado:not([hidden]) { animation: entra .18s ease-out; }
+    @keyframes entra { from { transform: scale(.96); opacity: .4; } to { transform: none; opacity: 1; } }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="marca">Movinsa</div>
+    <h1>Control de entradas</h1>
+  </header>
+
+  <section id="inicio">
+    <label for="pin">PIN del personal</label>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off">
+    <div class="espacio"></div>
+    <button id="btnIniciar">Iniciar escáner</button>
+    <p id="msgInicio" class="msg" role="status"></p>
+  </section>
+
+  <section id="escaner" hidden>
+    <div id="lector"></div>
+    <div class="contador"><span>Ingresos desde este celular</span><b id="cont">0</b></div>
+    <div class="manual">
+      <input id="manual" placeholder="Código del correo" autocapitalize="characters" autocomplete="off" aria-label="Escribir código a mano">
+      <button id="btnManual">Validar</button>
+    </div>
+    <button id="btnSalir" class="sec">Cerrar escáner</button>
+    <p id="msgEscaner" class="msg" role="status"></p>
+  </section>
+</main>
+
+<div id="resultado" hidden role="alert">
+  <div class="r-icono" id="rIcono"></div>
+  <div class="r-titulo" id="rTitulo"></div>
+  <p class="r-nombre" id="rNombre"></p>
+  <p class="r-detalle" id="rDetalle"></p>
+  <p class="r-toca" id="rToca">Toca la pantalla para seguir escaneando</p>
+</div>
+
+<script>
+  // ====== PEGA AQUÍ LA URL /exec DE TU APPS SCRIPT ======
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzUEeD8078gVlubpTSzegkyPWuS2vCN2VqsuRKERQFYYln_2DDvSWUjpAaQA2-s2mxCUQ/exec';
+
+  const $ = id => document.getElementById(id);
+  let pin = '', lector = null, ocupado = false, ultimo = '', ultimoT = 0, cont = 0, temporizador = null;
+
+  try { pin = sessionStorage.getItem('pin') || ''; if (pin) $('pin').value = pin; } catch (e) {}
+
+  async function api(params) {
+    let r;
+    try {
+      r = await fetch(API_URL + '?' + new URLSearchParams(params), { credentials: 'omit', redirect: 'follow' });
+    } catch (e) {
+      throw new Error('red');
+    }
+    const texto = await r.text();
+    try {
+      return JSON.parse(texto);
+    } catch (e) {
+      throw new Error(/<html|<!doctype/i.test(texto) ? 'html' : 'formato');
+    }
+  }
+
+  function explicar(e) {
+    if (e.message === 'red')
+      return 'No se pudo contactar al script. Revisa el internet y que la implementación tenga acceso “Cualquier usuario” y “Ejecutar como: Yo”.';
+    if (e.message === 'html')
+      return 'El script respondió con una página en vez de datos. Publica la versión nueva: Implementar → Gestionar implementaciones → Editar → Nueva versión → Implementar.';
+    return 'El script respondió algo inesperado. Revisa que el código de Apps Script esté actualizado y guardado.';
+  }
+
+  function mensaje(id, texto, error) {
+    $(id).textContent = texto;
+    $(id).classList.toggle('error', !!error);
+  }
+
+  $('btnIniciar').onclick = async () => {
+    pin = $('pin').value.trim();
+    if (!pin) return mensaje('msgInicio', 'Escribe el PIN para empezar.', true);
+    if (API_URL.indexOf('script.google.com') < 0) return mensaje('msgInicio', 'Falta configurar la URL de Apps Script en esta página.', true);
+    mensaje('msgInicio', 'Verificando PIN…');
+    try {
+      const r = await api({ accion: 'ping', pin });
+      if (r.estado !== 'listo') return mensaje('msgInicio', 'PIN incorrecto. Revísalo e intenta de nuevo.', true);
+      try { sessionStorage.setItem('pin', pin); } catch (e) {}
+      mensaje('msgInicio', '');
+      iniciarCamara();
+    } catch (e) {
+      mensaje('msgInicio', explicar(e), true);
+    }
+  };
+
+  async function iniciarCamara() {
+    $('inicio').hidden = true;
+    $('escaner').hidden = false;
+    mensaje('msgEscaner', '');
+    lector = lector || new Html5Qrcode('lector');
+    try {
+      await lector.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: (w, h) => { const s = Math.floor(Math.min(w, h) * 0.75); return { width: s, height: s }; } },
+        leido,
+        () => {}
+      );
+    } catch (e) {
+      mensaje('msgEscaner', 'No se pudo abrir la cámara. Permite el acceso a la cámara en el navegador y vuelve a iniciar. Mientras tanto puedes escribir el código.', true);
+    }
+  }
+
+  $('btnSalir').onclick = async () => {
+    try { if (lector && lector.isScanning) await lector.stop(); } catch (e) {}
+    $('escaner').hidden = true;
+    $('inicio').hidden = false;
+  };
+
+  function extraerCodigo(texto) {
+    const m = String(texto).match(/[?&]c=([^&#\s]+)/i);
+    return decodeURIComponent(m ? m[1] : texto).trim().toUpperCase();
+  }
+
+  function leido(texto) {
+    const c = extraerCodigo(texto);
+    const ahora = Date.now();
+    if (ocupado || (c === ultimo && ahora - ultimoT < 5000)) return;
+    ultimo = c; ultimoT = ahora;
+    validar(c);
+  }
+
+  $('btnManual').onclick = () => {
+    const c = extraerCodigo($('manual').value);
+    if (c) { $('manual').value = ''; validar(c); }
+  };
+  $('manual').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnManual').click(); });
+
+  function mostrar(clase, icono, titulo, nombre, detalle, auto) {
+    const r = $('resultado');
+    r.className = clase;
+    $('rIcono').textContent = icono;
+    $('rTitulo').textContent = titulo;
+    $('rNombre').textContent = nombre || '';
+    $('rDetalle').textContent = detalle || '';
+    $('rToca').hidden = clase === '';
+    r.hidden = false;
+    clearTimeout(temporizador);
+    if (auto) temporizador = setTimeout(cerrar, auto);
+  }
+
+  function cerrar() {
+    clearTimeout(temporizador);
+    $('resultado').hidden = true;
+    ocupado = false;
+  }
+  $('resultado').onclick = () => { if (!ocupado || $('resultado').className) cerrar(); };
+
+  function vibrar(patron) { try { navigator.vibrate && navigator.vibrate(patron); } catch (e) {} }
+
+  async function validar(c) {
+    ocupado = true;
+    mostrar('', '⏳', 'Verificando', c, '', 0);
+    try {
+      const r = await api({ accion: 'validar', c, pin });
+      if (r.estado === 'ok') {
+        cont++; $('cont').textContent = cont;
+        vibrar(120);
+        mostrar('ok', '✅', 'Registrado', r.nombre, 'Puede pasar', 2500);
+      } else if (r.estado === 'usado') {
+        vibrar([200, 100, 200]);
+        mostrar('usado', '⚠️', 'QR ya utilizado', r.nombre, 'Ingresó el ' + r.hora, 0);
+      } else if (r.estado === 'invalido') {
+        vibrar([400, 100, 400]);
+        mostrar('no', '❌', 'No registrado', 'Código ' + c, 'Este QR no está en la lista', 0);
+      } else if (r.estado === 'pin') {
+        mostrar('no', '🔒', 'PIN incorrecto', '', 'Cierra el escáner y escribe el PIN de nuevo', 0);
+      } else {
+        mostrar('no', '❌', 'Error', '', 'Intenta escanear de nuevo', 0);
+      }
+    } catch (e) {
+      mostrar('no', '📶', 'Sin conexión', '', explicar(e), 0);
+    }
+  }
+</script>
+</body>
+</html>
