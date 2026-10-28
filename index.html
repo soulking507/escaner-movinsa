@@ -131,7 +131,7 @@
 
 <script>
   // ====== PEGA AQUÍ LA URL /exec DE TU APPS SCRIPT ======
-  const API_URL = '  const API_URL = 'https://script.google.com/macros/s/AKfycbzmi19wH_gdiqc3T3TR9QxfZUZPtoAmLoxFvrWbGeR9RcrfVEQ_Pgo3n_ZwTdtUDgp_sw/exec';';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxqOMSk4HC2OQIN_i_C-oJFUQRYVRuoEqcGGskbRvjDzT6Oc0PVBW5gyorLUEAdRc19AQ/exec';
 
   const $ = id => document.getElementById(id);
   let pin = '', lector = null, ocupado = false, ultimo = '', ultimoT = 0, cont = 0, temporizador = null;
@@ -206,7 +206,7 @@
   };
 
   function extraerCodigo(texto) {
-    const m = String(texto).match(/[?&]c=([^&#\s]+)/i);
+    const m = String(texto).match(/[?&](?:c|codigo)=([^&#\s]+)/i);
     return decodeURIComponent(m ? m[1] : texto).trim().toUpperCase();
   }
 
@@ -250,7 +250,7 @@
     ocupado = true;
     mostrar('', '⏳', 'Verificando', c, '', 0);
     try {
-      const r = await api({ accion: 'validar', c, pin });
+      const r = await api({ accion: 'validar', codigo: c, pin });
       if (r.estado === 'ok') {
         cont++; $('cont').textContent = cont;
         vibrar(120);
@@ -264,7 +264,7 @@
       } else if (r.estado === 'pin') {
         mostrar('no', '🔒', 'PIN incorrecto', '', 'Cierra el escáner y escribe el PIN de nuevo', 0);
       } else {
-        mostrar('no', '❌', 'Error', '', 'Intenta escanear de nuevo', 0);
+        mostrar('no', '❌', 'Error', '', r.detalle || 'Intenta escanear de nuevo', 0);
       }
     } catch (e) {
       mostrar('no', '📶', 'Sin conexión', '', explicar(e), 0);
